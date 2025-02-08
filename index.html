@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Member Fuel Prices</title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- noUiSlider CSS -->
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.6.1/nouislider.min.css"
+  />
+  <link rel="icon" type="image/png" href="/assets/favicon.png" />
+</head>
+<body>
+  <!-- Navbar -->
+  <nav
+    id="navbar"
+    style="
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 20px;
+      color: white;
+    "
+  >
+    <!-- Logo -->
+    <div id="logo-container">
+      <img src="assets/Haulers United White On Black Logo.png" alt="Haulers United Logo" />
+    </div>
+    <!-- Navigation Links -->
+    <div id="nav-links" style="display: flex; gap: 20px">
+      <a href="https://haulersunited.org" target="_blank">
+        <button>Home</button>
+      </a>
+      <a href="https://www.haulersunited.org/join" target="_blank">
+        <button id="signup-button">Sign Up</button>
+      </a>
+    </div>
+  </nav>
+
+  <div id="tool-container">
+    <div id="discount-tool">
+      <!-- Top Row: Dropdown, Refresh, Filters, and Action Buttons -->
+      <div id="tool-top-row">
+        <button id="refreshTool" title="Refresh Fields" style="font-size: 1.5rem">
+          &#x27F3;
+        </button>
+        <select id="modeSelect">
+          <option value="single">Address Lookup</option>
+          <option value="route">Create Route</option>
+        </select>
+        <button id="toggleFilters">Filters</button>
+        <button id="findStations" onclick="findStationsForSingleAddress()">
+          Find Truck Stops
+        </button>
+        <button id="calculateRoute" onclick="performRoute()">Create Route</button>
+      </div>
+
+      <!-- Filters Container -->
+      <div id="filter-section">
+        <div id="filters">
+          <!-- Price Range Slider Container -->
+          <div id="priceRangeSlider"></div>
+          <!-- Display for the current price range -->
+          <div id="priceRangeDisplay" style="text-align: center; font-size: 14px; margin-top: 5px"></div>
+
+          <!-- Station Type Filter as Checkboxes -->
+          <div id="stationTypeFilter">
+            <label>
+              <input type="checkbox" name="stationType" value="all" checked />
+              All Stations
+            </label>
+            <label>
+              <input type="checkbox" name="stationType" value="pilot" />
+              Pilot
+            </label>
+            <label>
+              <input type="checkbox" name="stationType" value="casey" />
+              Casey
+            </label>
+          </div>
+
+          <!-- Distance Filter Slider -->
+          <div id="distanceSlider"></div>
+          <div
+            id="distanceSliderDisplay"
+            style="text-align: center; font-size: 14px; margin-top: 5px"
+          ></div>
+        </div>
+      </div>
+
+      <!-- Single Address Tool -->
+      <div id="singleAddressTool">
+        <label for="singleAddressInput" class="visually-hidden"></label>
+        <input
+          type="text"
+          id="singleAddressInput"
+          name="no-autocomplete"
+          placeholder="Enter the address"
+          autocomplete="new-password"
+        />
+      </div>
+
+      <!-- Route Tool -->
+      <div id="routeTool" style="display: none">
+        <div id="route-addresses">
+          <div>
+            <label for="start" class="visually-hidden"></label>
+            <input type="text" id="start" placeholder="Enter starting address" />
+          </div>
+          <div>
+            <label for="end" class="visually-hidden"></label>
+            <input type="text" id="end" placeholder="Enter destination address" />
+          </div>
+        </div>
+
+        <!-- NEW: Button container that appears AFTER route is created -->
+        <div id="googleMapsLinkContainer" style="display: none; margin-top: 10px;">
+          <button id="openGoogleMapsRoute">Open This Route in Google Maps</button>
+        </div>
+      </div>
+
+      <div id="highlightedStationsContainer" style="display: none">
+        <h3 id="highlightedStationsHeading">Truck Stops Nearby:</h3>
+        <ul id="highlightedStationsList"></ul>
+      </div>
+    </div>
+
+    <div id="map-container">
+      <div id="map" style="height: 500px; width: 100%"></div>
+    </div>
+  </div>
+
+  <footer>
+    <p id="last-updated">Prices updated: fetching data...</p>
+  </footer>
+
+  <!-- Google Maps API -->
+  <script
+    async
+    defer
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDYpNJXRFRuQq5IV8LQZi8E90r1gIaiORI&libraries=places,geometry"
+  ></script>
+  <!-- PapaParse -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+  <!-- noUiSlider JS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.6.1/nouislider.min.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>
