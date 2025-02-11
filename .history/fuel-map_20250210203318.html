@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Fuel Map Tool</title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- noUiSlider CSS -->
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.6.1/nouislider.min.css"
+  />
+  <link rel="icon" type="image/png" href="/assets/favicon.png" />
+</head>
+<body>
+
+  <!-- ============ MAIN NAVBAR ============ -->
+  <nav
+    id="navbar"
+    style="
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 20px;
+      color: white;
+    "
+  >
+    <div id="logo-container">
+      <img src="assets/Haulers United White On Black Logo.png" alt="Haulers United Logo" />
+    </div>
+
+    <div id="nav-links" style="display: flex; gap: 20px">
+      <a href="https://haulersunited.org" target="_blank">
+        <button>Home</button>
+      </a>
+      <a href="https://www.haulersunited.org/join" target="_blank">
+        <button id="signup-button">Sign Up</button>
+      </a>
+      <a href="fuel-map.html">
+        <button>Fuel Map Tool</button>
+      </a>
+    </div>
+  </nav>
+
+  <!-- ============ THE REST OF THE PAGE (TOOL & MAP) ============ -->
+  <div id="tool-container">
+
+    <!-- ============ SECOND "NAVBAR" FOR TABS ============ -->
+  <!-- These tabs are now separate from (and above) the discount tool's border -->
+  <div id="tool-tabs">
+    <div id="tabSingle" class="tool-tab active" data-mode="single">
+      Address Lookup
+    </div>
+    <div id="tabRoute" class="tool-tab" data-mode="route">
+      Create Route
+    </div>
+  </div>
+    
+    <!-- The discount tool (with its border, box-shadow, etc.) -->
+    <div id="discount-tool">
+      
+      <!-- Hide modeSelect if your JS needs it -->
+      <select id="modeSelect" style="display: none;">
+        <option value="single">Address Lookup</option>
+        <option value="route">Create Route</option>
+      </select>
+
+      <div id="tool-top-row">
+            <!-- REFRESH BUTTON (left) -->
+            <button
+                id="refreshTool"
+                class="icon-button"
+                title="Refresh Tool"
+                style="font-size: 2rem;"
+            >
+                <!-- The circular arrow hex code -->
+                &#x27F3;
+            </button>
+            <!-- A single icon button for toggling filters -->
+            <button
+            id="toggleFilters"
+            class="icon-button"
+            title="Show/Hide Filters"
+            >
+            <!-- "AdjustmentsHorizontal" style icon from Heroicons (3 lines & circles) -->
+            <svg
+                width="24"
+                height="24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+            >
+                <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M10.5 6h11.25m-11.25 0a1.5 1.5 0 01-3 0 1.5 1.5 0 013 0zm0 0V3.75
+                    m0 16.5h11.25m-11.25 0a1.5 1.5 0 01-3 0 1.5 1.5 0 013 0zm0 0v-2.25
+                    m-6-4.5h11.25m-11.25 0a1.5 1.5 0 01-3 0 1.5 1.5 0 013 0zm0 0v-2.25"
+                />
+            </svg>
+            </button>
+            <!-- Filters -->
+            <div id="filter-section" class="hidden">
+                <div id="filters">
+                    <div id="station-dropdown">
+                        <label for="station-filter"></label>
+                        <select class="filter-select" id="station-filter">
+                            <option value="all">All Stations</option>
+                            <option value="pilot">Pilot</option>
+                            <option value="caseys">Casey's</option>
+                        </select>
+                    </div>
+                    <div id="price-dropdown">
+                        <label for="price-filter"></label>
+                        <select class="filter-select" id="price-filter">
+                            <option value="all-prices" >All Price Ranges</option>
+                        </select>
+                    </div>
+                    <div id="distance-dropdown">
+                        <label for="distance-filter"></label>
+                        <select class="filter-select" id="distance-filter">
+                            <option value="0">Any Distance</option>
+                            <option value="1">0-10 Miles</option>
+                            <option value="2">10-20 Miles</option>
+                            <option value="3">20-30 Miles</option>
+                            <option value="4">30-40 Miles</option>
+                            <option value="5">40+ Miles</option>
+                        </select>
+                    </div>    
+                </div>                
+            </div>
+      </div>
+      </div>
+
+      <!-- Single Address Tool -->
+      <div id="singleAddressTool">
+        <label for="singleAddressInput" class="visually-hidden"></label>
+        <input
+          type="text"
+          id="singleAddressInput"
+          name="no-autocomplete"
+          placeholder="Enter the address"
+          autocomplete="new-password"
+        />
+      </div>
+
+      <!-- Route Tool -->
+      <div id="routeTool" style="display: none">
+        <div id="route-addresses">
+          <div>
+            <label for="start" class="visually-hidden"></label>
+            <input type="text" id="start" placeholder="Enter starting address" />
+          </div>
+          <div>
+            <label for="end" class="visually-hidden"></label>
+            <input type="text" id="end" placeholder="Enter destination address" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom row of action buttons -->
+      <div id="tool-bottom-row">
+        <button id="findStations" onclick="findStationsForSingleAddress()">Find Truck Stops</button>
+        <button id="calculateRoute" onclick="performRoute()">Create Route</button>
+        <button id="openGoogleMapsRoute" style="display: none;" onclick="openGoogleMapsRoute()">
+          Open This Route in Google Maps
+        </button>
+      </div>
+
+
+      <!-- Side-by-side layout for stops list & map -->
+    <div id="tool-layout">
+      <!-- Truck stops on the LEFT -->
+      <div id="highlightedStationsContainer" style="display: none">
+        <h3 id="highlightedStationsHeading">Truck Stops Nearby:</h3>
+        <ul id="highlightedStationsList"></ul>
+      </div>
+
+      <!-- Map on the RIGHT -->
+      <div id="map-container">
+        <div id="map" style="height: 500px; width: 100%"></div>
+      </div>
+    </div> <!-- /tool-layout -->
+    </div> <!-- /discount-tool -->
+
+    
+
+  </div> <!-- /tool-container -->
+
+  <footer>
+    <p id="last-updated">Prices updated: fetching data...</p>
+  </footer>
+
+  <!-- Google Maps API, PapaParse, noUiSlider, main.js -->
+  <script
+    async
+    defer
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDYpNJXRFRuQq5IV8LQZi8E90r1gIaiORI&libraries=places,geometry"
+  ></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+  <script src="main.js"></script>
+
+</body>
+</html>

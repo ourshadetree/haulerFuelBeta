@@ -338,10 +338,9 @@ window.initMap = async function initMap() {
 function plotLocationsOnMap(map, locations) {
   clearMarkers(gasStationMarkers);
   const infoWindow = new google.maps.InfoWindow();
-  let markerId = 0; // counter for unique IDs
 
   locations.forEach((location) => {
-    // For Pilot markers:
+    // Plot Pilot marker if coordinates exist.
     if (location.latP && location.lngP) {
       const pilotMarker = new google.maps.Marker({
         position: { lat: location.latP, lng: location.lngP },
@@ -356,18 +355,15 @@ function plotLocationsOnMap(map, locations) {
       });
       pilotMarker.stationType = "Pilot";
       pilotMarker.todaysPriceP = location.todaysPriceP;
+      pilotMarker.tomorrowPriceP = location.tomorrowPriceP;
       pilotMarker.retailPriceP = location.retailPriceP;
       pilotMarker.hyperlinkP = location.hyperlinkP;
       pilotMarker.cityP = location.cityP;
       pilotMarker.stateP = location.stateP;
       pilotMarker.originalIcon = pilotMarker.getIcon();
       pilotMarker.isWaypoint = false;
-      // Assign a unique ID to the marker.
-      pilotMarker.id = "marker-" + markerId++;
-      
-      // Add a click listener that highlights the corresponding list item.
+
       pilotMarker.addListener("click", () => {
-        // Open info window as before.
         infoWindow.setContent(
           `<div>
              <strong>Pilot Station</strong><br>
@@ -379,13 +375,12 @@ function plotLocationsOnMap(map, locations) {
         );
         infoWindow.open(map, pilotMarker);
         toggleWaypoint(pilotMarker);
-        // Highlight the list item.
-        highlightListItem(pilotMarker.id);
       });
+
       gasStationMarkers.push(pilotMarker);
     }
 
-    // For Casey markers (similar logic):
+    // Plot Casey marker if coordinates exist.
     if (location.latC && location.lngC) {
       const caseyMarker = new google.maps.Marker({
         position: { lat: location.latC, lng: location.lngC },
@@ -400,12 +395,12 @@ function plotLocationsOnMap(map, locations) {
       });
       caseyMarker.stationType = "Casey";
       caseyMarker.todaysPriceC = location.todaysPriceC;
+      caseyMarker.tomorrowPriceC = location.tomorrowPriceC;
       caseyMarker.cityC = location.cityC;
       caseyMarker.stateC = location.stateC;
       caseyMarker.originalIcon = caseyMarker.getIcon();
       caseyMarker.isWaypoint = false;
-      caseyMarker.id = "marker-" + markerId++;
-      
+
       caseyMarker.addListener("click", () => {
         infoWindow.setContent(
           `<div>
@@ -416,31 +411,20 @@ function plotLocationsOnMap(map, locations) {
         );
         infoWindow.open(map, caseyMarker);
         toggleWaypoint(caseyMarker);
-        // Highlight the corresponding list item.
-        highlightListItem(caseyMarker.id);
       });
+
       gasStationMarkers.push(caseyMarker);
     }
   });
 }
-
 
 /**
  * Toggles a marker’s state as a “waypoint” (and changes its icon accordingly).
  * @param {google.maps.Marker} marker - The marker to toggle.
  */
 function toggleWaypoint(marker) {
-  // Only perform the toggle if we are in "route" mode.
-  const mode = document.getElementById("modeSelect").value;
-  if (mode !== "route") {
-    return;
-  }
-  
-  // Toggle the waypoint status.
   marker.isWaypoint = !marker.isWaypoint;
-  
   if (marker.isWaypoint) {
-    // If now a waypoint, change to the purple icon.
     marker.setIcon({
       url: "http://maps.google.com/mapfiles/ms/icons/purple-dot.png",
       scaledSize: new google.maps.Size(22, 22),
@@ -448,16 +432,9 @@ function toggleWaypoint(marker) {
       anchor: new google.maps.Point(11, 22),
     });
   } else {
-    // If toggled off, return to the "highlighted" state, which is green.
-    marker.setIcon({
-      url: "http://maps.google.com/mapfiles/ms/icons/green-dot.png",
-      scaledSize: new google.maps.Size(22, 22),
-      origin: new google.maps.Point(0, 0),
-      anchor: new google.maps.Point(11, 22),
-    });
+    marker.setIcon(marker.originalIcon);
   }
 }
-
 
 /**
  * Resizes markers based on the current zoom level.
@@ -609,7 +586,7 @@ async function findStationsForSingleAddress() {
 
     // Center and zoom the map around the geocoded center.
     map.setCenter(center);
-    map.setZoom(8);
+    map.setZoom(10);
   } catch (error) {
     console.error(error);
     alert("Could not find gas stations for the entered address.");
@@ -812,105 +789,36 @@ function openGoogleMapsRoute() {
  * In this version, we also rebuild the map.
  */
 function refreshTool() {
-  console.log("Refreshing tool state...");
-
-  // Clear common input fields
   document.getElementById("singleAddressInput").value = "";
   document.getElementById("start").value = "";
   document.getElementById("end").value = "";
 
-  // Clear filter selections and hide filters (if they are toggled)
-  // For dropdowns:
-  const stationFilter = document.getElementById("station-filter");
-  if (stationFilter) {
-    stationFilter.value = "all";
-  }
-  const priceFilter = document.getElementById("price-filter");
-  if (priceFilter) {
-    priceFilter.value = "all-prices";
-  }
-  const distanceFilter = document.getElementById("distance-filter");
-  if (distanceFilter) {
-    distanceFilter.value = "0"; // "0" means "Any Distance" per your options
-  }
-  
-  // Hide the filter section if it's currently visible.
-  const filterSection = document.getElementById("filter-section");
-  if (filterSection && !filterSection.classList.contains("hidden")) {
-    filterSection.classList.add("hidden");
-  }
-  const toggleFiltersBtn = document.getElementById("toggleFilters");
-  if (toggleFiltersBtn) {
-    toggleFiltersBtn.classList.remove("active");
-  }
+  document.getElementById("highlightedStationsList").innerHTML = "";
+  document.getElementById("highlightedStationsContainer").style.display = "none";
 
-  // Clear the Truck Stops Nearby list and hide its container.
-  const highlightedStationsList = document.getElementById("highlightedStationsList");
-  if (highlightedStationsList) {
-    highlightedStationsList.innerHTML = "";
-  }
-  const highlightedStationsContainer = document.getElementById("highlightedStationsContainer");
-  if (highlightedStationsContainer) {
-    highlightedStationsContainer.style.display = "none";
-  }
-
-  // Reset markers: clear any waypoint selections, reset icons, and make them visible.
   gasStationMarkers.forEach((marker) => {
     marker.isWaypoint = false;
     marker.setIcon(marker.originalIcon);
     marker.setVisible(true);
   });
 
-  // Reset directions if any exist.
   if (directionsRenderer) {
     directionsRenderer.setDirections({ routes: [] });
   }
-  // Clear any route markers.
   routeMarkers.forEach((marker) => marker.setMap(null));
   routeMarkers = [];
-  
-  // Hide the "Open This Route in Google Maps" button.
-  const googleMapsLinkDiv = document.getElementById("openGoogleMapsRoute");
+  const googleMapsLinkDiv = document.getElementById("googleMapsLinkContainer");
   if (googleMapsLinkDiv) {
     googleMapsLinkDiv.style.display = "none";
   }
-
-  // Clear any stored route data.
-  currentRouteStart = "";
-  currentRouteEnd = "";
   stationsAlongCurrentRoute = [];
 
-  // Now, mode-specific resets:
-  const mode = document.getElementById("modeSelect").value; // "single" or "route"
-  if (mode === "single") {
-    // For Single Address mode:
-    // Reset map to default center and zoom.
-    if (map) {
-      map.setCenter({ lat: 39.8283, lng: -98.5795 });
-      map.setZoom(4.5);
-    }
-    // Stay in the single address tab.
-    document.getElementById("singleAddressTool").style.display = "block";
-    document.getElementById("routeTool").style.display = "none";
-    // Also, if needed, reapply filters to show all markers.
-    applyFilters();
-  } else if (mode === "route") {
-    // For Create Route mode:
-    // Clear the route from the map while keeping the user in route mode.
-    if (map) {
-      // Optionally, you might want to keep the map as is or reset only directions.
-      map.setCenter({ lat: 39.8283, lng: -98.5795 });
-      map.setZoom(4.5);
-    }
-    // Stay in the route tab.
-    document.getElementById("singleAddressTool").style.display = "none";
-    document.getElementById("routeTool").style.display = "block";
-    // The open-in-Google-Maps button should remain hidden until a new route is created.
-  }
-
-  console.log("Tool state refreshed.");
+  // Rebuild the map entirely.
+  map = buildMap();
+  // Reinitialize autocomplete and other map listeners.
+  setupAutocomplete();
+  map.addListener("zoom_changed", resizeMarkersBasedOnZoom);
 }
-
 
 /**
  * Sets up event listeners for filter dropdowns.
@@ -944,17 +852,8 @@ document.addEventListener("DOMContentLoaded", () => {
    * Also, we force the map container to display.
    */
   function updateToolMode() {
-    refreshTool();
 
-    // Additionally, explicitly reset the filter UI:
-    const filterSection = document.getElementById("filter-section");
-    if (filterSection) {
-      filterSection.classList.add("hidden");
-    }
-    const toggleFiltersBtn = document.getElementById("toggleFilters");
-    if (toggleFiltersBtn) {
-      toggleFiltersBtn.classList.remove("active");
-    }
+    
 
     const mode = modeSelect.value; // "single" or "route"
     if (mode === "single") {
@@ -1003,7 +902,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     document.getElementById("findStations").style.display = mode === "single" ? "inline-block" : "none";
     document.getElementById("calculateRoute").style.display = mode === "route" ? "inline-block" : "none";
-    
   }
 
   // Set initial mode to "single" and update UI accordingly.

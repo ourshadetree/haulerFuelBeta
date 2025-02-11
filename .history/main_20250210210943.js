@@ -430,17 +430,8 @@ function plotLocationsOnMap(map, locations) {
  * @param {google.maps.Marker} marker - The marker to toggle.
  */
 function toggleWaypoint(marker) {
-  // Only perform the toggle if we are in "route" mode.
-  const mode = document.getElementById("modeSelect").value;
-  if (mode !== "route") {
-    return;
-  }
-  
-  // Toggle the waypoint status.
   marker.isWaypoint = !marker.isWaypoint;
-  
   if (marker.isWaypoint) {
-    // If now a waypoint, change to the purple icon.
     marker.setIcon({
       url: "http://maps.google.com/mapfiles/ms/icons/purple-dot.png",
       scaledSize: new google.maps.Size(22, 22),
@@ -448,16 +439,9 @@ function toggleWaypoint(marker) {
       anchor: new google.maps.Point(11, 22),
     });
   } else {
-    // If toggled off, return to the "highlighted" state, which is green.
-    marker.setIcon({
-      url: "http://maps.google.com/mapfiles/ms/icons/green-dot.png",
-      scaledSize: new google.maps.Size(22, 22),
-      origin: new google.maps.Point(0, 0),
-      anchor: new google.maps.Point(11, 22),
-    });
+    marker.setIcon(marker.originalIcon);
   }
 }
-
 
 /**
  * Resizes markers based on the current zoom level.
@@ -525,6 +509,9 @@ function onPlaceChangedEnd() {
  * Function to handle "Find Truck Stops" in single address mode.
  * Called by the button's onclick attribute.
  */
+// -----------------------------------------
+// 1. Single Address Lookup Function
+// -----------------------------------------
 async function findStationsForSingleAddress() {
   const address = document.getElementById("singleAddressInput").value.trim();
   if (!address) {
@@ -546,29 +533,35 @@ async function findStationsForSingleAddress() {
 
     console.log("📍 Geocoded Center:", center);
 
-    // Hide all markers initially.
+    // Hide all markers
     gasStationMarkers.forEach((marker) => marker.setVisible(false));
 
-    // Compute each marker's distance from the geocoded center.
+    // Compute each marker's distance from the center
     gasStationMarkers.forEach((marker) => {
       const distance = google.maps.geometry.spherical.computeDistanceBetween(
         center,
         marker.getPosition()
       );
       marker.distance = distance;
+      console.log(`Marker ${marker.title} distance:`, distance);
     });
 
-    // Define a radius in meters (e.g., 50 miles = ~80467 meters).
+    // Define a radius in meters (50 miles ≈ 80467 meters)
     const radiusInMeters = 80467;
     let stationsInRange = gasStationMarkers.filter(
       (marker) => marker.distance <= radiusInMeters
     );
 
-    // Optionally, apply further filters (price, station type, etc.).
+    // Apply any additional filters (if needed)
     stationsInRange = filterStations(stationsInRange);
     console.log(`🔍 Stations after filtering: ${stationsInRange.length}`);
 
-    // Make the markers within range visible and update their icon to green.
+    if (stationsInRange.length === 0) {
+      alert("No stations found near the entered address.");
+      return;
+    }
+
+    // Update markers: change icon to green and show them
     stationsInRange.forEach((marker) => {
       marker.setIcon({
         url: "http://maps.google.com/mapfiles/ms/icons/green-dot.png",
@@ -579,37 +572,52 @@ async function findStationsForSingleAddress() {
       marker.setVisible(true);
     });
 
-    // Optionally, update the nearby stations list (if you have that UI).
+    // Populate the "Truck Stops Nearby" list with bidirectional links.
     const highlightedStationsContainer = document.getElementById("highlightedStationsContainer");
     const highlightedStationsList = document.getElementById("highlightedStationsList");
     highlightedStationsList.innerHTML = "";
-    if (stationsInRange.length > 0) {
-      stationsInRange.forEach((marker) => {
-        const li = document.createElement("li");
-        li.className = "station-card";
-        // Build the station label and info (adjust as needed).
-        const stationType = marker.stationType; 
-        let stationLabel = (stationType === "Pilot") ? "Pilot Station" : "Casey Station";
-        let city = (stationType === "Pilot") ? marker.cityP : marker.cityC;
-        let state = (stationType === "Pilot") ? marker.stateP : marker.stateC;
-        let todaysPrice = (stationType === "Pilot") ? marker.todaysPriceP : marker.todaysPriceC;
-        if (todaysPrice != null) todaysPrice = todaysPrice.toFixed(2);
-        li.innerHTML = `
-          <h4>${stationLabel}</h4>
-          <p>City, State: ${city ?? "Unknown City"}, ${state ?? "Unknown State"}</p>
-          <p>Today's Price: $${todaysPrice ?? "N/A"}</p>
-        `;
-        highlightedStationsList.appendChild(li);
-      });
-      highlightedStationsContainer.style.display = "block";
-    } else {
-      highlightedStationsContainer.style.display = "none";
-      alert("No stations found near the entered address.");
-    }
+    stationsInRange.forEach((marker) => {
+      const li = document.createElement("li");
+      li.className = "station-card";
+      // Save the marker's id so that we can link back to it.
+      li.setAttribute("data-marker-id", marker.id);
 
-    // Center and zoom the map around the geocoded center.
-    map.setCenter(center);
-    map.setZoom(8);
+      const stationType = marker.stationType;
+      let stationLabel = stationType === "Pilot" ? "Pilot Station" : "Casey Station";
+      let city = stationType === "Pilot" ? marker.cityP : marker.cityC;
+      let state = stationType === "Pilot" ? marker.stateP : marker.stateC;
+      let todaysPrice = stationType === "Pilot" ? marker.todaysPriceP : marker.todaysPriceC;
+      if (todaysPrice != null) todaysPrice = todaysPrice.toFixed(2);
+
+      li.innerHTML = `
+        <h4>${stationLabel}</h4>
+        <p>City, State: ${city || "Unknown City"}, ${state || "Unknown State"}</p>
+        <p>Today's Price: $${todaysPrice || "N/A"}</p>
+      `;
+
+      // When a list item is clicked, trigger the marker's click event and highlight it.
+      li.addEventListener("click", function () {
+        const markerId = this.getAttribute("data-marker-id");
+        const correspondingMarker = gasStationMarkers.find(m => m.id === markerId);
+        if (correspondingMarker) {
+          google.maps.event.trigger(correspondingMarker, "click");
+          highlightListItem(markerId);
+        }
+      });
+
+      highlightedStationsList.appendChild(li);
+    });
+    highlightedStationsContainer.style.display = "block";
+
+    // Adjust the map bounds to include the center and all stations.
+    const bounds = new google.maps.LatLngBounds();
+    bounds.extend(center);
+    stationsInRange.forEach((marker) => bounds.extend(marker.getPosition()));
+    map.fitBounds(bounds);
+    // Optionally adjust zoom a little:
+    map.setZoom(map.getZoom() - 1);
+
+    console.log("findStationsForSingleAddress() completed successfully.");
   } catch (error) {
     console.error(error);
     alert("Could not find gas stations for the entered address.");
@@ -618,14 +626,15 @@ async function findStationsForSingleAddress() {
 
 
 
-/**
- * Calculates a route between addresses and highlights stations along that route.
- */
+// -----------------------------------------
+// 2. Create Route Function
+// -----------------------------------------
 async function performRoute() {
   if (!isMapReady || !directionsService || !directionsRenderer) {
     console.error("Map or directions services are not ready.");
     return;
   }
+
   const start = document.getElementById("start").value.trim();
   const end = document.getElementById("end").value.trim();
   if (!start && !end) {
@@ -660,6 +669,8 @@ async function performRoute() {
     const routePolyline = result.routes[0].overview_path;
     await highlightStationsAlongRoute(routePolyline);
 
+    // After calculating the route and highlighting nearby markers,
+    // show the "Open This Route in Google Maps" button and the list.
     document.getElementById("openGoogleMapsRoute").style.display = "block";
     document.getElementById("highlightedStationsContainer").style.display = "block";
   } catch (error) {
@@ -667,6 +678,7 @@ async function performRoute() {
     alert("Route calculation failed: " + error);
   }
 }
+
 
 /**
  * Highlights stations along a given route polyline.

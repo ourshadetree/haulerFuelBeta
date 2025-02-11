@@ -430,17 +430,8 @@ function plotLocationsOnMap(map, locations) {
  * @param {google.maps.Marker} marker - The marker to toggle.
  */
 function toggleWaypoint(marker) {
-  // Only perform the toggle if we are in "route" mode.
-  const mode = document.getElementById("modeSelect").value;
-  if (mode !== "route") {
-    return;
-  }
-  
-  // Toggle the waypoint status.
   marker.isWaypoint = !marker.isWaypoint;
-  
   if (marker.isWaypoint) {
-    // If now a waypoint, change to the purple icon.
     marker.setIcon({
       url: "http://maps.google.com/mapfiles/ms/icons/purple-dot.png",
       scaledSize: new google.maps.Size(22, 22),
@@ -448,16 +439,9 @@ function toggleWaypoint(marker) {
       anchor: new google.maps.Point(11, 22),
     });
   } else {
-    // If toggled off, return to the "highlighted" state, which is green.
-    marker.setIcon({
-      url: "http://maps.google.com/mapfiles/ms/icons/green-dot.png",
-      scaledSize: new google.maps.Size(22, 22),
-      origin: new google.maps.Point(0, 0),
-      anchor: new google.maps.Point(11, 22),
-    });
+    marker.setIcon(marker.originalIcon);
   }
 }
-
 
 /**
  * Resizes markers based on the current zoom level.
@@ -525,6 +509,9 @@ function onPlaceChangedEnd() {
  * Function to handle "Find Truck Stops" in single address mode.
  * Called by the button's onclick attribute.
  */
+// -----------------------------------------
+// 1. Single Address Lookup Function
+// -----------------------------------------
 async function findStationsForSingleAddress() {
   const address = document.getElementById("singleAddressInput").value.trim();
   if (!address) {
@@ -546,75 +533,32 @@ async function findStationsForSingleAddress() {
 
     console.log("📍 Geocoded Center:", center);
 
-    // Hide all markers initially.
+    // Hide all markers
     gasStationMarkers.forEach((marker) => marker.setVisible(false));
 
-    // Compute each marker's distance from the geocoded center.
+    // Compute each marker's distance from the center
     gasStationMarkers.forEach((marker) => {
       const distance = google.maps.geometry.spherical.computeDistanceBetween(
         center,
         marker.getPosition()
       );
       marker.distance = distance;
+      console.log(`Marker ${marker.title} distance:`, distance);
     });
 
-    // Define a radius in meters (e.g., 50 miles = ~80467 meters).
+    // Define a radius in meters (50 miles ≈ 80467 meters)
     const radiusInMeters = 80467;
     let stationsInRange = gasStationMarkers.filter(
       (marker) => marker.distance <= radiusInMeters
     );
 
-    // Optionally, apply further filters (price, station type, etc.).
+    // Apply any additional filters (if needed)
     stationsInRange = filterStations(stationsInRange);
     console.log(`🔍 Stations after filtering: ${stationsInRange.length}`);
 
-    // Make the markers within range visible and update their icon to green.
-    stationsInRange.forEach((marker) => {
-      marker.setIcon({
-        url: "http://maps.google.com/mapfiles/ms/icons/green-dot.png",
-        scaledSize: new google.maps.Size(22, 22),
-        origin: new google.maps.Point(0, 0),
-        anchor: new google.maps.Point(11, 22),
-      });
-      marker.setVisible(true);
-    });
+    if (stationsInRange.length === 0) {
+      alert("No stations found near the entered address.")
 
-    // Optionally, update the nearby stations list (if you have that UI).
-    const highlightedStationsContainer = document.getElementById("highlightedStationsContainer");
-    const highlightedStationsList = document.getElementById("highlightedStationsList");
-    highlightedStationsList.innerHTML = "";
-    if (stationsInRange.length > 0) {
-      stationsInRange.forEach((marker) => {
-        const li = document.createElement("li");
-        li.className = "station-card";
-        // Build the station label and info (adjust as needed).
-        const stationType = marker.stationType; 
-        let stationLabel = (stationType === "Pilot") ? "Pilot Station" : "Casey Station";
-        let city = (stationType === "Pilot") ? marker.cityP : marker.cityC;
-        let state = (stationType === "Pilot") ? marker.stateP : marker.stateC;
-        let todaysPrice = (stationType === "Pilot") ? marker.todaysPriceP : marker.todaysPriceC;
-        if (todaysPrice != null) todaysPrice = todaysPrice.toFixed(2);
-        li.innerHTML = `
-          <h4>${stationLabel}</h4>
-          <p>City, State: ${city ?? "Unknown City"}, ${state ?? "Unknown State"}</p>
-          <p>Today's Price: $${todaysPrice ?? "N/A"}</p>
-        `;
-        highlightedStationsList.appendChild(li);
-      });
-      highlightedStationsContainer.style.display = "block";
-    } else {
-      highlightedStationsContainer.style.display = "none";
-      alert("No stations found near the entered address.");
-    }
-
-    // Center and zoom the map around the geocoded center.
-    map.setCenter(center);
-    map.setZoom(8);
-  } catch (error) {
-    console.error(error);
-    alert("Could not find gas stations for the entered address.");
-  }
-}
 
 
 

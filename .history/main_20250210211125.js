@@ -338,10 +338,9 @@ window.initMap = async function initMap() {
 function plotLocationsOnMap(map, locations) {
   clearMarkers(gasStationMarkers);
   const infoWindow = new google.maps.InfoWindow();
-  let markerId = 0; // counter for unique IDs
 
   locations.forEach((location) => {
-    // For Pilot markers:
+    // Plot Pilot marker if coordinates exist.
     if (location.latP && location.lngP) {
       const pilotMarker = new google.maps.Marker({
         position: { lat: location.latP, lng: location.lngP },
@@ -356,18 +355,15 @@ function plotLocationsOnMap(map, locations) {
       });
       pilotMarker.stationType = "Pilot";
       pilotMarker.todaysPriceP = location.todaysPriceP;
+      pilotMarker.tomorrowPriceP = location.tomorrowPriceP;
       pilotMarker.retailPriceP = location.retailPriceP;
       pilotMarker.hyperlinkP = location.hyperlinkP;
       pilotMarker.cityP = location.cityP;
       pilotMarker.stateP = location.stateP;
       pilotMarker.originalIcon = pilotMarker.getIcon();
       pilotMarker.isWaypoint = false;
-      // Assign a unique ID to the marker.
-      pilotMarker.id = "marker-" + markerId++;
-      
-      // Add a click listener that highlights the corresponding list item.
+
       pilotMarker.addListener("click", () => {
-        // Open info window as before.
         infoWindow.setContent(
           `<div>
              <strong>Pilot Station</strong><br>
@@ -379,13 +375,12 @@ function plotLocationsOnMap(map, locations) {
         );
         infoWindow.open(map, pilotMarker);
         toggleWaypoint(pilotMarker);
-        // Highlight the list item.
-        highlightListItem(pilotMarker.id);
       });
+
       gasStationMarkers.push(pilotMarker);
     }
 
-    // For Casey markers (similar logic):
+    // Plot Casey marker if coordinates exist.
     if (location.latC && location.lngC) {
       const caseyMarker = new google.maps.Marker({
         position: { lat: location.latC, lng: location.lngC },
@@ -400,12 +395,12 @@ function plotLocationsOnMap(map, locations) {
       });
       caseyMarker.stationType = "Casey";
       caseyMarker.todaysPriceC = location.todaysPriceC;
+      caseyMarker.tomorrowPriceC = location.tomorrowPriceC;
       caseyMarker.cityC = location.cityC;
       caseyMarker.stateC = location.stateC;
       caseyMarker.originalIcon = caseyMarker.getIcon();
       caseyMarker.isWaypoint = false;
-      caseyMarker.id = "marker-" + markerId++;
-      
+
       caseyMarker.addListener("click", () => {
         infoWindow.setContent(
           `<div>
@@ -416,31 +411,20 @@ function plotLocationsOnMap(map, locations) {
         );
         infoWindow.open(map, caseyMarker);
         toggleWaypoint(caseyMarker);
-        // Highlight the corresponding list item.
-        highlightListItem(caseyMarker.id);
       });
+
       gasStationMarkers.push(caseyMarker);
     }
   });
 }
-
 
 /**
  * Toggles a marker’s state as a “waypoint” (and changes its icon accordingly).
  * @param {google.maps.Marker} marker - The marker to toggle.
  */
 function toggleWaypoint(marker) {
-  // Only perform the toggle if we are in "route" mode.
-  const mode = document.getElementById("modeSelect").value;
-  if (mode !== "route") {
-    return;
-  }
-  
-  // Toggle the waypoint status.
   marker.isWaypoint = !marker.isWaypoint;
-  
   if (marker.isWaypoint) {
-    // If now a waypoint, change to the purple icon.
     marker.setIcon({
       url: "http://maps.google.com/mapfiles/ms/icons/purple-dot.png",
       scaledSize: new google.maps.Size(22, 22),
@@ -448,16 +432,9 @@ function toggleWaypoint(marker) {
       anchor: new google.maps.Point(11, 22),
     });
   } else {
-    // If toggled off, return to the "highlighted" state, which is green.
-    marker.setIcon({
-      url: "http://maps.google.com/mapfiles/ms/icons/green-dot.png",
-      scaledSize: new google.maps.Size(22, 22),
-      origin: new google.maps.Point(0, 0),
-      anchor: new google.maps.Point(11, 22),
-    });
+    marker.setIcon(marker.originalIcon);
   }
 }
-
 
 /**
  * Resizes markers based on the current zoom level.

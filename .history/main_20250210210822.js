@@ -430,17 +430,8 @@ function plotLocationsOnMap(map, locations) {
  * @param {google.maps.Marker} marker - The marker to toggle.
  */
 function toggleWaypoint(marker) {
-  // Only perform the toggle if we are in "route" mode.
-  const mode = document.getElementById("modeSelect").value;
-  if (mode !== "route") {
-    return;
-  }
-  
-  // Toggle the waypoint status.
   marker.isWaypoint = !marker.isWaypoint;
-  
   if (marker.isWaypoint) {
-    // If now a waypoint, change to the purple icon.
     marker.setIcon({
       url: "http://maps.google.com/mapfiles/ms/icons/purple-dot.png",
       scaledSize: new google.maps.Size(22, 22),
@@ -448,16 +439,9 @@ function toggleWaypoint(marker) {
       anchor: new google.maps.Point(11, 22),
     });
   } else {
-    // If toggled off, return to the "highlighted" state, which is green.
-    marker.setIcon({
-      url: "http://maps.google.com/mapfiles/ms/icons/green-dot.png",
-      scaledSize: new google.maps.Size(22, 22),
-      origin: new google.maps.Point(0, 0),
-      anchor: new google.maps.Point(11, 22),
-    });
+    marker.setIcon(marker.originalIcon);
   }
 }
-
 
 /**
  * Resizes markers based on the current zoom level.
