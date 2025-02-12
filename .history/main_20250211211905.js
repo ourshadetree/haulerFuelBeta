@@ -833,7 +833,6 @@ async function highlightStationsAlongRoute(routePolyline) {
   const highlightedStationsParent = document.getElementById("highlightedStationsContainer");
   highlightedStationsContainer.innerHTML = "";
 
-  // Hide all markers first.
   gasStationMarkers.forEach((marker) => marker.setVisible(false));
 
   let stationsNearRoute = [];
@@ -845,7 +844,7 @@ async function highlightStationsAlongRoute(routePolyline) {
     for (let i = 0; i < routePolyline.length - 1; i++) {
       const segmentStart = routePolyline[i];
       const distance = google.maps.geometry.spherical.computeDistanceBetween(markerPosition, segmentStart);
-      if (distance <= 5000) {  // buffer of 5km (~3 miles)
+      if (distance <= 5000) {
         isNearRoute = true;
         minDistance = Math.min(minDistance, distance);
         break;
@@ -858,7 +857,6 @@ async function highlightStationsAlongRoute(routePolyline) {
   });
 
   console.log(`🚀 Stations before filtering: ${stationsNearRoute.length}`);
-  // Use the currentReferenceLocation (set when the route was created) for distance filtering.
   stationsNearRoute = filterStations(stationsNearRoute, currentReferenceLocation);
   console.log(`🔍 Stations after filtering: ${stationsNearRoute.length}`);
 
@@ -866,7 +864,6 @@ async function highlightStationsAlongRoute(routePolyline) {
 
   if (stationsNearRoute.length > 0) {
     stationsNearRoute.forEach((marker) => {
-      // If the marker is not already selected as a waypoint, update its icon to the default route (green) icon.
       if (!marker.isWaypoint) {
         marker.setIcon({
           url: "http://maps.google.com/mapfiles/ms/icons/green-dot.png",
@@ -877,7 +874,6 @@ async function highlightStationsAlongRoute(routePolyline) {
       }
       marker.setVisible(true);
 
-      // Create list item for each station.
       const li = document.createElement("li");
       li.className = "station-card";
       li.setAttribute("data-marker-id", marker.id);
@@ -911,7 +907,6 @@ async function highlightStationsAlongRoute(routePolyline) {
     highlightedStationsParent.style.display = "none";
   }
 }
-
 
 
 /**

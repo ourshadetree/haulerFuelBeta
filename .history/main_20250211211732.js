@@ -680,13 +680,12 @@ async function findStationsForSingleAddress() {
     });
 
     console.log("📍 Geocoded Center:", center);
-    // Set the reference location for distance filtering.
     currentReferenceLocation = center;
 
     // Hide all markers initially.
     gasStationMarkers.forEach((marker) => marker.setVisible(false));
 
-    // Compute each marker's distance from the geocoded center.
+    // Compute each marker's distance.
     gasStationMarkers.forEach((marker) => {
       const distance = google.maps.geometry.spherical.computeDistanceBetween(
         center,
@@ -695,7 +694,7 @@ async function findStationsForSingleAddress() {
       marker.distance = distance;
     });
 
-    // Define a radius in meters (e.g., 50 miles ~80467 m).
+    // Define a radius in meters (e.g., 50 miles ~80467 m)
     const radiusInMeters = 80467;
     let stationsInRange = gasStationMarkers.filter(
       (marker) => marker.distance <= radiusInMeters
@@ -705,7 +704,7 @@ async function findStationsForSingleAddress() {
     stationsInRange = filterStations(stationsInRange, center);
     console.log(`🔍 Stations after filtering: ${stationsInRange.length}`);
 
-    // Update markers: change icon to green and make visible.
+    // Update marker icons and visibility.
     stationsInRange.forEach((marker) => {
       marker.setIcon({
         url: "http://maps.google.com/mapfiles/ms/icons/green-dot.png",
@@ -724,30 +723,31 @@ async function findStationsForSingleAddress() {
       stationsInRange.forEach((marker) => {
         const li = document.createElement("li");
         li.className = "station-card";
-        // Link the list item to the marker.
         li.setAttribute("data-marker-id", marker.id);
-
+        
         const stationType = marker.stationType;
-        let stationLabel = stationType === "Pilot" ? "Pilot Station" : "Casey Station";
-        let city = stationType === "Pilot" ? marker.cityP : marker.cityC;
-        let state = stationType === "Pilot" ? marker.stateP : marker.stateC;
-        let todaysPrice = stationType === "Pilot" ? marker.todaysPriceP : marker.todaysPriceC;
-        let retailPrice = stationType === "Pilot" ? marker.retailPriceP : marker.retailPriceC;
+        let stationLabel = (stationType === "Pilot") ? "Pilot Station" : "Casey Station";
+        let city = (stationType === "Pilot") ? marker.cityP : marker.cityC;
+        let state = (stationType === "Pilot") ? marker.stateP : marker.stateC;
+        let todaysPrice = (stationType === "Pilot") ? marker.todaysPriceP : marker.todaysPriceC;
+        let retailPrice = (stationType === "Pilot") ? marker.retailPriceP : marker.retailPriceC;
         if (todaysPrice != null) todaysPrice = todaysPrice.toFixed(2);
         if (retailPrice != null) retailPrice = retailPrice.toFixed(2);
-
+        
         li.innerHTML = `
           <h4>${stationLabel}</h4>
           <p>City, State: ${city ?? "Unknown City"}, ${state ?? "Unknown State"}</p>
           <p>Today's Price: $${todaysPrice ?? "N/A"}</p>
           <p>Retail Price: $${retailPrice ?? "N/A"}</p>
         `;
-        // When the list item is clicked, trigger the marker's click event.
+        
+        // When a station card is clicked, trigger the marker's click event.
         li.addEventListener("click", () => {
           google.maps.event.trigger(marker, "click");
           clearHighlights();
           li.classList.add("highlight");
         });
+        
         highlightedStationsList.appendChild(li);
       });
       highlightedStationsContainer.style.display = "block";
@@ -756,7 +756,7 @@ async function findStationsForSingleAddress() {
       alert("No stations found near the entered address.");
     }
 
-    // Center and zoom the map around the geocoded center.
+    // Center and zoom the map.
     map.setCenter(center);
     map.setZoom(8);
   } catch (error) {
@@ -764,7 +764,6 @@ async function findStationsForSingleAddress() {
     alert("Could not find gas stations for the entered address.");
   }
 }
-
 
 
 
@@ -833,7 +832,6 @@ async function highlightStationsAlongRoute(routePolyline) {
   const highlightedStationsParent = document.getElementById("highlightedStationsContainer");
   highlightedStationsContainer.innerHTML = "";
 
-  // Hide all markers first.
   gasStationMarkers.forEach((marker) => marker.setVisible(false));
 
   let stationsNearRoute = [];
@@ -845,7 +843,7 @@ async function highlightStationsAlongRoute(routePolyline) {
     for (let i = 0; i < routePolyline.length - 1; i++) {
       const segmentStart = routePolyline[i];
       const distance = google.maps.geometry.spherical.computeDistanceBetween(markerPosition, segmentStart);
-      if (distance <= 5000) {  // buffer of 5km (~3 miles)
+      if (distance <= 5000) {
         isNearRoute = true;
         minDistance = Math.min(minDistance, distance);
         break;
@@ -858,7 +856,6 @@ async function highlightStationsAlongRoute(routePolyline) {
   });
 
   console.log(`🚀 Stations before filtering: ${stationsNearRoute.length}`);
-  // Use the currentReferenceLocation (set when the route was created) for distance filtering.
   stationsNearRoute = filterStations(stationsNearRoute, currentReferenceLocation);
   console.log(`🔍 Stations after filtering: ${stationsNearRoute.length}`);
 
@@ -866,7 +863,6 @@ async function highlightStationsAlongRoute(routePolyline) {
 
   if (stationsNearRoute.length > 0) {
     stationsNearRoute.forEach((marker) => {
-      // If the marker is not already selected as a waypoint, update its icon to the default route (green) icon.
       if (!marker.isWaypoint) {
         marker.setIcon({
           url: "http://maps.google.com/mapfiles/ms/icons/green-dot.png",
@@ -877,7 +873,6 @@ async function highlightStationsAlongRoute(routePolyline) {
       }
       marker.setVisible(true);
 
-      // Create list item for each station.
       const li = document.createElement("li");
       li.className = "station-card";
       li.setAttribute("data-marker-id", marker.id);
@@ -911,7 +906,6 @@ async function highlightStationsAlongRoute(routePolyline) {
     highlightedStationsParent.style.display = "none";
   }
 }
-
 
 
 /**
