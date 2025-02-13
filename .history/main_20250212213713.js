@@ -31,6 +31,9 @@ const apiKey = "AIzaSyDYpNJXRFRuQq5IV8LQZi8E90r1gIaiORI";
 /**********************************************
  * HELPER FUNCTIONS
  **********************************************/
+/**
+ * Fetches the last updated time from Google Sheets metadata.
+ */
 async function fetchLastUpdatedTime() {
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?fields=developerMetadata&key=${apiKey}`;
   try {
@@ -52,6 +55,9 @@ async function fetchLastUpdatedTime() {
   }
 }
 
+/**
+ * Displays the last updated time in the footer.
+ */
 async function displayLastUpdatedTime() {
   const footerElement = document.getElementById("last-updated");
   const lastUpdatedTime = await fetchLastUpdatedTime();
@@ -74,9 +80,11 @@ async function displayLastUpdatedTime() {
 }
 
 /**
- * Fetches location data from CSVs.
- * For Pilot rows, if the retail price is lower than the hauler's price,
- * set hauler's price equal to the retail price and remove the retail price.
+ * Fetches location data (from Pilot and Casey CSVs), parses them with PapaParse,
+ * and returns an array of location objects. Also updates globalMinPrice and globalMaxPrice.
+ *
+ * For Pilot stations, if the retail price is lower than the hauler's price,
+ * we set the hauler's price equal to the retail price and remove the retail price.
  */
 async function fetchLocations() {
   const pilotCSVUrl =
@@ -117,7 +125,7 @@ async function fetchLocations() {
       .map((row) => {
         let haulerPrice = parseFloat(row["Today's Price"]?.replace("$", ""));
         let retailPrice = parseFloat(row["Retail Price"]?.replace("$", ""));
-        // If retail price is lower than hauler's price, use retail price and remove retail.
+        // If retail price is lower than hauler price, set hauler price equal to retail and remove retail price.
         if (!isNaN(retailPrice) && !isNaN(haulerPrice) && retailPrice < haulerPrice) {
           haulerPrice = retailPrice;
           retailPrice = null;
@@ -165,6 +173,9 @@ async function fetchLocations() {
   }
 }
 
+/**
+ * Clears all markers from the map and resets the marker array.
+ */
 function clearMarkers(markerArray) {
   markerArray.forEach((marker) => marker.setMap(null));
   markerArray.length = 0;
@@ -178,11 +189,14 @@ function filterStations(stations, userLocation) {
     console.warn("⚠️ No stations to filter.");
     return [];
   }
+
   const selectedType = document.getElementById("station-filter").value.toLowerCase();
   console.log(`🔍 Selected Station Type: ${selectedType}`);
 
   const selectedPrice = document.getElementById("price-filter").value;
-  let discountFilterActive = false, discountMin = 0, discountMax = Infinity;
+  let discountFilterActive = false,
+      discountMin = 0,
+      discountMax = Infinity;
   if (selectedPrice && selectedPrice !== "all-prices") {
     if (selectedPrice.indexOf("-") !== -1) {
       const parts = selectedPrice.split("-");
@@ -207,6 +221,7 @@ function filterStations(stations, userLocation) {
   return stations.filter((marker) => {
     const matchesType =
       selectedType === "all" || marker.stationType.toLowerCase() === selectedType;
+
     let discount = 0;
     if (marker.stationType === "Pilot") {
       if (marker.retailPriceP != null && marker.todaysPriceP != null) {
@@ -216,12 +231,17 @@ function filterStations(stations, userLocation) {
       discount = 0;
     }
     const matchesDiscount = !discountFilterActive || (discount >= discountMin && discount < discountMax);
+
     let matchesDistance = true;
     if (userLocation) {
       const stationPosition = marker.getPosition();
-      const distance = google.maps.geometry.spherical.computeDistanceBetween(userLocation, stationPosition);
+      const distance = google.maps.geometry.spherical.computeDistanceBetween(
+        userLocation,
+        stationPosition
+      );
       matchesDistance = distance <= maxDistance;
     }
+
     return matchesType && matchesDiscount && matchesDistance;
   });
 }
@@ -231,6 +251,7 @@ function applyFilters() {
   console.log("🔄 Reapplying filters...");
   const userLocation = currentReferenceLocation;
   gasStationMarkers.forEach(marker => marker.setVisible(false));
+
   const filteredStations = filterStations(gasStationMarkers, userLocation);
   filteredStations.forEach(marker => marker.setVisible(true));
   console.log(`✅ Filtered stations: ${filteredStations.length}`);
@@ -250,12 +271,19 @@ function buildMap() {
     console.error("Map container not found!");
     return;
   }
-  const mapOptions = { center: { lat: 39.8283, lng: -98.5795 }, zoom: 4.5 };
+
+  const mapOptions = {
+    center: { lat: 39.8283, lng: -98.5795 },
+    zoom: 4.5,
+  };
   const newMap = new google.maps.Map(mapContainer, mapOptions);
+
   directionsService = new google.maps.DirectionsService();
   directionsRenderer = new google.maps.DirectionsRenderer({ suppressMarkers: true });
   directionsRenderer.setMap(newMap);
+
   newMap.addListener("zoom_changed", resizeMarkersBasedOnZoom);
+
   return newMap;
 }
 
@@ -263,9 +291,17 @@ function setupAutocomplete() {
   console.log("Setting up autocomplete...");
   autoCompleteStart = new google.maps.places.Autocomplete(document.getElementById("start"));
   autoCompleteStart.addListener("place_changed", onPlaceChangedStart);
+
   autoCompleteEnd = new google.maps.places.Autocomplete(document.getElementById("end"));
   autoCompleteEnd.addListener("place_changed", onPlaceChangedEnd);
-  autoCompleteSingle = new google.maps.places.Autocomplete(document.getElementById("singleAddressInput"), { types: ["geocode"], componentRestrictions: { country: "us" } });
+
+  autoCompleteSingle = new google.maps.places.Autocomplete(
+    document.getElementById("singleAddressInput"),
+    {
+      types: ["geocode"],
+      componentRestrictions: { country: "us" },
+    }
+  );
   autoCompleteSingle.addListener("place_changed", () => {
     const place = autoCompleteSingle.getPlace();
     if (!place.geometry || !place.geometry.location) {
@@ -279,17 +315,24 @@ function setupAutocomplete() {
 window.initMap = async function initMap() {
   console.log("initMap called!");
   map = buildMap();
-  if (!map) { console.error("Map failed to build."); return; }
+  if (!map) {
+    console.error("Map failed to build.");
+    return;
+  }
+
   setupAutocomplete();
   directionsServiceReady = true;
   isMapReady = true;
   setupFilterListeners();
+
   const locations = await fetchLocations();
   console.log(`Fetched ${locations.length} locations`);
   if (globalMinPrice === Infinity) globalMinPrice = 0;
   if (globalMaxPrice === -Infinity) globalMaxPrice = 100;
   plotLocationsOnMap(map, locations);
+
   setTimeout(() => google.maps.event.trigger(map, 'resize'), 100);
+
   console.log("✅ Google Maps initialized successfully.");
 };
 
@@ -297,6 +340,7 @@ function plotLocationsOnMap(map, locations) {
   clearMarkers(gasStationMarkers);
   infoWindow = new google.maps.InfoWindow();
   let markerId = 0;
+
   locations.forEach((location) => {
     // Pilot markers
     if (location.latP && location.lngP) {
@@ -304,11 +348,16 @@ function plotLocationsOnMap(map, locations) {
         position: { lat: location.latP, lng: location.lngP },
         map: map,
         title: `${location.cityP}, ${location.stateP}`,
-        icon: { url: "http://maps.google.com/mapfiles/ms/icons/red-dot.png", scaledSize: new google.maps.Size(16, 16), origin: new google.maps.Point(0, 0), anchor: new google.maps.Point(8, 16) },
+        icon: {
+          url: "http://maps.google.com/mapfiles/ms/icons/red-dot.png",
+          scaledSize: new google.maps.Size(16, 16),
+          origin: new google.maps.Point(0, 0),
+          anchor: new google.maps.Point(8, 16),
+        },
       });
       pilotMarker.stationType = "Pilot";
       pilotMarker.todaysPriceP = location.todaysPriceP;
-      pilotMarker.retailPriceP = location.retailPriceP; // May be null if removed
+      pilotMarker.retailPriceP = location.retailPriceP;
       pilotMarker.hyperlinkP = location.hyperlinkP;
       pilotMarker.cityP = location.cityP;
       pilotMarker.stateP = location.stateP;
@@ -316,37 +365,42 @@ function plotLocationsOnMap(map, locations) {
       pilotMarker.isWaypoint = false;
       pilotMarker.id = "marker-" + markerId++;
 
+      // Marker click: show infoWindow, highlight card, and in route mode add the waypoint prompt to the card.
       pilotMarker.addListener("click", () => {
-        // Build infoWindow content; include retail price only if available.
-        let retailHTML = "";
-        if (location.retailPriceP != null) {
-          retailHTML = `<b>Retail Price:</b> $${location.retailPriceP.toFixed(2)}<br>`;
-        }
-        const contentHTML = `<div>
+        infoWindow.setContent(
+          `<div>
              <strong>Pilot Station</strong><br>
              <b>City:</b> ${location.cityP}, ${location.stateP}<br>
              <b>Hauler's Price:</b> $${location.todaysPriceP?.toFixed(2) || "N/A"}<br>
-             ${retailHTML}
+             <b>Retail Price:</b> ${location.retailPriceP ? "$" + location.retailPriceP.toFixed(2) : "N/A"}<br>
              <a href="${location.hyperlinkP}" target="_blank">Station Website</a>
-           </div>`;
-        infoWindow.setContent(contentHTML);
+           </div>`
+        );
         infoWindow.open(map, pilotMarker);
         clearHighlights();
         highlightListItem(pilotMarker.id);
         if (document.getElementById("modeSelect").value === "route") {
           const card = document.querySelector(`.station-card[data-marker-id="${pilotMarker.id}"]`);
-          if (card) { showCardWaypointPrompt(card, pilotMarker); }
+          if (card) {
+            showCardWaypointPrompt(card, pilotMarker);
+          }
         }
       });
       gasStationMarkers.push(pilotMarker);
     }
+
     // Casey markers
     if (location.latC && location.lngC) {
       const caseyMarker = new google.maps.Marker({
         position: { lat: location.latC, lng: location.lngC },
         map: map,
         title: `${location.cityC}, ${location.stateC}`,
-        icon: { url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png", scaledSize: new google.maps.Size(16, 16), origin: new google.maps.Point(0, 0), anchor: new google.maps.Point(8, 16) },
+        icon: {
+          url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png",
+          scaledSize: new google.maps.Size(16, 16),
+          origin: new google.maps.Point(0, 0),
+          anchor: new google.maps.Point(8, 16),
+        },
       });
       caseyMarker.stationType = "Casey";
       caseyMarker.todaysPriceC = location.todaysPriceC;
@@ -357,18 +411,22 @@ function plotLocationsOnMap(map, locations) {
       caseyMarker.id = "marker-" + markerId++;
 
       caseyMarker.addListener("click", () => {
-        const contentHTML = `<div>
+        infoWindow.setContent(
+          `<div>
              <strong>Casey Station</strong><br>
              <b>City:</b> ${location.cityC}, ${location.stateC}<br>
              <b>Hauler's Price:</b> $${location.todaysPriceC?.toFixed(2) || "N/A"}<br>
-           </div>`;
-        infoWindow.setContent(contentHTML);
+             <b>Retail Price:</b> $${location.retailPriceC ? location.retailPriceC.toFixed(2) : "N/A"}<br>
+           </div>`
+        );
         infoWindow.open(map, caseyMarker);
         clearHighlights();
         highlightListItem(caseyMarker.id);
         if (document.getElementById("modeSelect").value === "route") {
           const card = document.querySelector(`.station-card[data-marker-id="${caseyMarker.id}"]`);
-          if (card) { showCardWaypointPrompt(card, caseyMarker); }
+          if (card) {
+            showCardWaypointPrompt(card, caseyMarker);
+          }
         }
       });
       gasStationMarkers.push(caseyMarker);
@@ -378,14 +436,24 @@ function plotLocationsOnMap(map, locations) {
 
 function updateMarkerAsWaypoint(marker) {
   marker.isWaypoint = true;
-  marker.setIcon({ url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png", scaledSize: new google.maps.Size(30, 30), origin: new google.maps.Point(0, 0), anchor: new google.maps.Point(15, 30) });
+  marker.setIcon({
+    url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png",
+    scaledSize: new google.maps.Size(30, 30),
+    origin: new google.maps.Point(0, 0),
+    anchor: new google.maps.Point(15, 30)
+  });
   clearHighlights();
   highlightListItem(marker.id);
 }
 
 function updateMarkerAsNotWaypoint(marker) {
   marker.isWaypoint = false;
-  marker.setIcon({ url: "http://maps.google.com/mapfiles/ms/icons/green-dot.png", scaledSize: new google.maps.Size(22, 22), origin: new google.maps.Point(0, 0), anchor: new google.maps.Point(11, 22) });
+  marker.setIcon({
+    url: "http://maps.google.com/mapfiles/ms/icons/green-dot.png",
+    scaledSize: new google.maps.Size(22, 22),
+    origin: new google.maps.Point(0, 0),
+    anchor: new google.maps.Point(11, 22)
+  });
   clearHighlights();
   highlightListItem(marker.id);
 }
@@ -447,7 +515,12 @@ function resizeMarkersBasedOnZoom() {
     if (icon) {
       const anchorX = Math.floor(markerSize / 2);
       const anchorY = markerSize;
-      marker.setIcon({ ...icon, scaledSize: new google.maps.Size(markerSize, markerSize), origin: new google.maps.Point(0, 0), anchor: new google.maps.Point(anchorX, anchorY) });
+      marker.setIcon({
+        ...icon,
+        scaledSize: new google.maps.Size(markerSize, markerSize),
+        origin: new google.maps.Point(0, 0),
+        anchor: new google.maps.Point(anchorX, anchorY),
+      });
     }
   });
 }
@@ -457,7 +530,11 @@ function onPlaceChangedStart() {
   if (place.geometry) {
     map.setCenter(place.geometry.location);
     map.setZoom(15);
-    const marker = new google.maps.Marker({ map: map, position: place.geometry.location, title: place.name });
+    const marker = new google.maps.Marker({
+      map: map,
+      position: place.geometry.location,
+      title: place.name,
+    });
     routeMarkers.push(marker);
   }
 }
@@ -467,7 +544,11 @@ function onPlaceChangedEnd() {
   if (place.geometry) {
     map.setCenter(place.geometry.location);
     map.setZoom(15);
-    const marker = new google.maps.Marker({ map: map, position: place.geometry.location, title: place.name });
+    const marker = new google.maps.Marker({
+      map: map,
+      position: place.geometry.location,
+      title: place.name,
+    });
     routeMarkers.push(marker);
   }
 }
@@ -478,6 +559,7 @@ async function findStationsForSingleAddress() {
     alert("Please enter an address.");
     return;
   }
+
   try {
     const geocoder = new google.maps.Geocoder();
     const center = await new Promise((resolve, reject) => {
@@ -489,21 +571,37 @@ async function findStationsForSingleAddress() {
         }
       });
     });
+
     console.log("📍 Geocoded Center:", center);
     currentReferenceLocation = center;
+
     gasStationMarkers.forEach((marker) => marker.setVisible(false));
     gasStationMarkers.forEach((marker) => {
-      const distance = google.maps.geometry.spherical.computeDistanceBetween(center, marker.getPosition());
+      const distance = google.maps.geometry.spherical.computeDistanceBetween(
+        center,
+        marker.getPosition()
+      );
       marker.distance = distance;
     });
+
     const radiusInMeters = 80467;
-    let stationsInRange = gasStationMarkers.filter((marker) => marker.distance <= radiusInMeters);
+    let stationsInRange = gasStationMarkers.filter(
+      (marker) => marker.distance <= radiusInMeters
+    );
+
     stationsInRange = filterStations(stationsInRange, center);
     console.log(`🔍 Stations after filtering: ${stationsInRange.length}`);
+
     stationsInRange.forEach((marker) => {
-      marker.setIcon({ url: "http://maps.google.com/mapfiles/ms/icons/green-dot.png", scaledSize: new google.maps.Size(22, 22), origin: new google.maps.Point(0, 0), anchor: new google.maps.Point(11, 22) });
+      marker.setIcon({
+        url: "http://maps.google.com/mapfiles/ms/icons/green-dot.png",
+        scaledSize: new google.maps.Size(22, 22),
+        origin: new google.maps.Point(0, 0),
+        anchor: new google.maps.Point(11, 22),
+      });
       marker.setVisible(true);
     });
+
     const highlightedStationsContainer = document.getElementById("highlightedStationsContainer");
     const highlightedStationsList = document.getElementById("highlightedStationsList");
     highlightedStationsList.innerHTML = "";
@@ -512,6 +610,7 @@ async function findStationsForSingleAddress() {
         const li = document.createElement("li");
         li.className = "station-card";
         li.setAttribute("data-marker-id", marker.id);
+
         const stationType = marker.stationType;
         let stationLabel = stationType === "Pilot" ? "Pilot Station" : "Casey Station";
         let city = stationType === "Pilot" ? marker.cityP : marker.cityC;
@@ -520,16 +619,14 @@ async function findStationsForSingleAddress() {
         let retailPrice = stationType === "Pilot" ? marker.retailPriceP : marker.retailPriceC;
         if (todaysPrice != null) todaysPrice = todaysPrice.toFixed(2);
         if (retailPrice != null) retailPrice = retailPrice.toFixed(2);
-        let retailHTML = "";
-        if (retailPrice != null) {
-          retailHTML = `<p>Retail Price: $${retailPrice}</p>`;
-        }
+
         li.innerHTML = `
           <h4>${stationLabel}</h4>
           <p>City, State: ${city ?? "Unknown City"}, ${state ?? "Unknown State"}</p>
           <p>Today's Price: $${todaysPrice ?? "N/A"}</p>
-          ${retailHTML}
+          <p>Retail Price: $${retailPrice ?? "N/A"}</p>
         `;
+        // In route mode, clicking the card triggers the marker's infoWindow and adds the waypoint prompt.
         li.addEventListener("click", () => {
           if (document.getElementById("modeSelect").value === "route") {
             google.maps.event.trigger(marker, "click");
@@ -547,6 +644,7 @@ async function findStationsForSingleAddress() {
       highlightedStationsContainer.style.display = "none";
       alert("No stations found near the entered address.");
     }
+
     map.setCenter(center);
     map.setZoom(8);
   } catch (error) {
@@ -568,11 +666,18 @@ async function performRoute() {
   }
   currentRouteStart = start || end;
   currentRouteEnd = end || start;
-  const routeRequest = { origin: start || end, destination: end || start, travelMode: google.maps.TravelMode.DRIVING };
+
+  const routeRequest = {
+    origin: start || end,
+    destination: end || start,
+    travelMode: google.maps.TravelMode.DRIVING,
+  };
+
   if (!start || !end) {
     routeRequest.destination = routeRequest.origin;
     alert("Only one address provided. Creating a route that loops back to the same location.");
   }
+
   try {
     const result = await new Promise((resolve, reject) => {
       directionsService.route(routeRequest, (response, status) => {
@@ -584,11 +689,14 @@ async function performRoute() {
       });
     });
     directionsRenderer.setDirections(result);
+
     if (result.routes && result.routes[0] && result.routes[0].legs && result.routes[0].legs[0]) {
       currentReferenceLocation = result.routes[0].legs[0].start_location;
     }
+
     const routePolyline = result.routes[0].overview_path;
     await highlightStationsAlongRoute(routePolyline);
+
     document.getElementById("openGoogleMapsRoute").style.display = "block";
     document.getElementById("highlightedStationsContainer").style.display = "block";
   } catch (error) {
@@ -601,12 +709,15 @@ async function highlightStationsAlongRoute(routePolyline) {
   const highlightedStationsContainer = document.getElementById("highlightedStationsList");
   const highlightedStationsParent = document.getElementById("highlightedStationsContainer");
   highlightedStationsContainer.innerHTML = "";
+
   gasStationMarkers.forEach((marker) => marker.setVisible(false));
+
   let stationsNearRoute = [];
   gasStationMarkers.forEach((marker) => {
     const markerPosition = marker.getPosition();
     let isNearRoute = false;
     let minDistance = Infinity;
+
     for (let i = 0; i < routePolyline.length - 1; i++) {
       const segmentStart = routePolyline[i];
       const distance = google.maps.geometry.spherical.computeDistanceBetween(markerPosition, segmentStart);
@@ -621,19 +732,29 @@ async function highlightStationsAlongRoute(routePolyline) {
       stationsNearRoute.push(marker);
     }
   });
+
   console.log(`🚀 Stations before filtering: ${stationsNearRoute.length}`);
   stationsNearRoute = filterStations(stationsNearRoute, currentReferenceLocation);
   console.log(`🔍 Stations after filtering: ${stationsNearRoute.length}`);
+
   stationsAlongCurrentRoute = stationsNearRoute;
+
   if (stationsNearRoute.length > 0) {
     stationsNearRoute.forEach((marker) => {
       if (!marker.isWaypoint) {
-        marker.setIcon({ url: "http://maps.google.com/mapfiles/ms/icons/green-dot.png", scaledSize: new google.maps.Size(22, 22), origin: new google.maps.Point(0, 0), anchor: new google.maps.Point(11, 22) });
+        marker.setIcon({
+          url: "http://maps.google.com/mapfiles/ms/icons/green-dot.png",
+          scaledSize: new google.maps.Size(22, 22),
+          origin: new google.maps.Point(0, 0),
+          anchor: new google.maps.Point(11, 22),
+        });
       }
       marker.setVisible(true);
+
       const li = document.createElement("li");
       li.className = "station-card";
       li.setAttribute("data-marker-id", marker.id);
+
       const stationType = marker.stationType;
       let stationLabel = stationType === "Pilot" ? "Pilot Station" : "Casey Station";
       let city = stationType === "Pilot" ? marker.cityP : marker.cityC;
@@ -642,16 +763,14 @@ async function highlightStationsAlongRoute(routePolyline) {
       let retailPrice = stationType === "Pilot" ? marker.retailPriceP : marker.retailPriceC;
       if (todaysPrice != null) todaysPrice = todaysPrice.toFixed(2);
       if (retailPrice != null) retailPrice = retailPrice.toFixed(2);
-      let retailHTML = "";
-      if (retailPrice != null) {
-        retailHTML = `<p>Retail Price: $${retailPrice}</p>`;
-      }
+
       li.innerHTML = `
         <h4>${stationLabel}</h4>
         <p>City, State: ${city ?? "Unknown City"}, ${state ?? "Unknown State"}</p>
         <p>Today's Price: $${todaysPrice ?? "N/A"}</p>
-        ${retailHTML}
+        <p>Retail Price: $${retailPrice ?? "N/A"}</p>
       `;
+
       li.addEventListener("click", () => {
         if (document.getElementById("modeSelect").value === "route") {
           google.maps.event.trigger(marker, "click");
@@ -662,6 +781,7 @@ async function highlightStationsAlongRoute(routePolyline) {
         clearHighlights();
         li.classList.add("highlight");
       });
+
       highlightedStationsContainer.appendChild(li);
     });
     highlightedStationsParent.style.display = "block";
@@ -675,11 +795,13 @@ function buildGoogleMapsLink(origin, destination, waypointsArray) {
   const originParam = `origin=${encodeURIComponent(origin)}`;
   const destinationParam = `destination=${encodeURIComponent(destination)}`;
   const travelModeParam = `travelmode=driving`;
+
   let waypointsParam = "";
   if (waypointsArray.length > 0) {
     const joined = waypointsArray.join("|");
     waypointsParam = `&waypoints=${encodeURIComponent(joined)}`;
   }
+
   return `${baseUrl}&${originParam}&${destinationParam}&${travelModeParam}${waypointsParam}`;
 }
 
@@ -690,21 +812,26 @@ function openGoogleMapsRoute() {
     alert("No valid route to open. Please create a route first.");
     return;
   }
+
   let selectedMarkers = gasStationMarkers.filter(m => m.isWaypoint);
   console.log("Number of markers flagged as waypoints:", selectedMarkers.length);
+
   if (selectedMarkers.length === 0 && stationsAlongCurrentRoute.length > 0) {
     selectedMarkers = stationsAlongCurrentRoute;
     console.log("Using stationsAlongCurrentRoute. Count:", selectedMarkers.length);
   }
+
   if (selectedMarkers.length === 0) {
     alert("No stations found to include as waypoints.");
     return;
   }
+
   const waypointCoords = selectedMarkers.map(marker => {
     const pos = marker.getPosition();
     return `${pos.lat()},${pos.lng()}`;
   });
   console.log("Waypoint coordinates:", waypointCoords);
+
   const googleMapsUrl = buildGoogleMapsLink(currentRouteStart, currentRouteEnd, waypointCoords);
   console.log("Generated Google Maps URL:", googleMapsUrl);
   window.open(googleMapsUrl, "_blank");
@@ -712,52 +839,72 @@ function openGoogleMapsRoute() {
 
 function refreshTool() {
   console.log("Refreshing tool state...");
+
   document.getElementById("singleAddressInput").value = "";
   document.getElementById("start").value = "";
   document.getElementById("end").value = "";
+
   const stationFilter = document.getElementById("station-filter");
   if (stationFilter) { stationFilter.value = "all"; }
   const priceFilter = document.getElementById("price-filter");
   if (priceFilter) { priceFilter.value = "all-prices"; }
   const distanceFilter = document.getElementById("distance-filter");
   if (distanceFilter) { distanceFilter.value = "0"; }
+  
   const filterSection = document.getElementById("filter-section");
   if (filterSection && !filterSection.classList.contains("hidden")) {
     filterSection.classList.add("hidden");
   }
   const toggleFiltersBtn = document.getElementById("toggleFilters");
   if (toggleFiltersBtn) { toggleFiltersBtn.classList.remove("active"); }
+
   const highlightedStationsList = document.getElementById("highlightedStationsList");
   if (highlightedStationsList) { highlightedStationsList.innerHTML = ""; }
   const highlightedStationsContainer = document.getElementById("highlightedStationsContainer");
   if (highlightedStationsContainer) { highlightedStationsContainer.style.display = "none"; }
+
   gasStationMarkers.forEach((marker) => {
     marker.isWaypoint = false;
     marker.setIcon(marker.originalIcon);
     marker.setVisible(true);
   });
-  if (directionsRenderer) { directionsRenderer.setDirections({ routes: [] }); }
+
+  if (directionsRenderer) {
+    directionsRenderer.setDirections({ routes: [] });
+  }
   routeMarkers.forEach((marker) => marker.setMap(null));
   routeMarkers = [];
+  
   const googleMapsLinkDiv = document.getElementById("openGoogleMapsRoute");
   if (googleMapsLinkDiv) { googleMapsLinkDiv.style.display = "none"; }
+
   currentRouteStart = "";
   currentRouteEnd = "";
   stationsAlongCurrentRoute = [];
   currentReferenceLocation = null;
+
   clearHighlights();
+
   if (infoWindow) { infoWindow.close(); }
+
   const mode = document.getElementById("modeSelect").value;
   if (mode === "single") {
-    if (map) { map.setCenter({ lat: 39.8283, lng: -98.5795 }); map.setZoom(4.5); }
+    if (map) {
+      map.setCenter({ lat: 39.8283, lng: -98.5795 });
+      map.setZoom(4.5);
+    }
     document.getElementById("singleAddressTool").style.display = "block";
     document.getElementById("routeTool").style.display = "none";
     applyFilters();
   } else if (mode === "route") {
-    if (map) { map.setCenter({ lat: 39.8283, lng: -98.5795 }); map.setZoom(4.5); }
+    if (map) {
+      map.setCenter({ lat: 39.8283, lng: -98.5795 });
+      map.setZoom(4.5);
+    }
     document.getElementById("singleAddressTool").style.display = "none";
     document.getElementById("routeTool").style.display = "block";
   }
+
   console.log("Tool state refreshed.");
 }
 
@@ -766,6 +913,7 @@ function setupFilterListeners() {
   const priceFilter = document.getElementById("price-filter");
   const distanceFilter = document.getElementById("distance-filter");
   const modeSelect = document.getElementById("modeSelect");
+
   if (stationFilter) { stationFilter.addEventListener("change", applyFilters); }
   if (priceFilter) { priceFilter.addEventListener("change", applyFilters); }
   if (distanceFilter) {
@@ -773,8 +921,11 @@ function setupFilterListeners() {
       if (modeSelect.value === "single") {
         applyFilters();
       } else if (modeSelect.value === "route") {
-        if (currentReferenceLocation) { applyFilters(); }
-        else { console.log("Route not created yet; ignoring distance filter changes."); }
+        if (currentReferenceLocation) {
+          applyFilters();
+        } else {
+          console.log("Route not created yet; ignoring distance filter changes.");
+        }
       }
     });
   }
@@ -789,10 +940,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function updateToolMode() {
     refreshTool();
+  
     const filterSection = document.getElementById("filter-section");
     if (filterSection) { filterSection.classList.add("hidden"); }
     const toggleFiltersBtn = document.getElementById("toggleFilters");
     if (toggleFiltersBtn) { toggleFiltersBtn.classList.remove("active"); }
+  
     const mode = document.getElementById("modeSelect").value;
     const distanceFilter = document.getElementById("distance-filter");
     if (mode === "route") {
@@ -804,15 +957,29 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("singleAddressTool").style.display = "block";
       document.getElementById("routeTool").style.display = "none";
       document.getElementById("map-container").style.display = "block";
-      if (!map) { console.log("No map detected in single mode—calling initMap()"); initMap(); }
+      if (!map) {
+        console.log("No map detected in single mode—calling initMap()");
+        initMap();
+      }
     }
+  
     document.getElementById("highlightedStationsList").innerHTML = "";
     document.getElementById("highlightedStationsContainer").style.display = "none";
     gasStationMarkers.forEach((marker) => {
       marker.setIcon(
         marker.stationType === "Pilot"
-          ? { url: "http://maps.google.com/mapfiles/ms/icons/red-dot.png", scaledSize: new google.maps.Size(22, 22), origin: new google.maps.Point(0, 0), anchor: new google.maps.Point(8, 16) }
-          : { url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png", scaledSize: new google.maps.Size(22, 22), origin: new google.maps.Point(0, 0), anchor: new google.maps.Point(8, 16) }
+          ? {
+              url: "http://maps.google.com/mapfiles/ms/icons/red-dot.png",
+              scaledSize: new google.maps.Size(22, 22),
+              origin: new google.maps.Point(0, 0),
+              anchor: new google.maps.Point(8, 16),
+            }
+          : {
+              url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png",
+              scaledSize: new google.maps.Size(22, 22),
+              origin: new google.maps.Point(0, 0),
+              anchor: new google.maps.Point(8, 16),
+            }
       );
       marker.setVisible(true);
     });
@@ -826,7 +993,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("findStations").style.display = mode === "single" ? "inline-block" : "none";
     document.getElementById("calculateRoute").style.display = mode === "route" ? "inline-block" : "none";
   }
-
+  
   modeSelect.value = "single";
   updateToolMode();
 

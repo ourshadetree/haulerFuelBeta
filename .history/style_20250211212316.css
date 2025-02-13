@@ -1,0 +1,416 @@
+/* ======================================
+   BASIC RESETS & GLOBAL STYLES
+   ====================================== */
+   .hidden {
+    display: none !important;
+  }
+  
+  html, body {
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+    background-color: #f5f5f5;
+    box-sizing: border-box;
+  }
+  
+  /* Let body use flex column layout (optional) */
+  body {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    align-items: center;
+  }
+  
+  /* ======================================
+     NAVBAR (FIXED)
+     ====================================== */
+  #navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 80px;
+    background-color: #0A0837;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    color: white;
+    box-sizing: border-box;
+  }
+  
+  #logo-container img {
+    max-width: 250px;
+    height: auto;
+  }
+  
+  #nav-links {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+  }
+  
+  #nav-links a {
+    text-decoration: none;
+  }
+  
+  /* Navbar buttons */
+  #nav-links a button {
+    padding: 8px 16px;
+    font-size: 16px;
+    font-weight: bold;
+    background-color: white;
+    color: #0A0837;
+    border: 2px solid #0A0837;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+  }
+  #nav-links a button:hover {
+    background-color: #261b8c;
+    color: white;
+    border-color: #261b8c;
+  }
+  
+  /* ======================================
+     SECOND NAVBAR: Address/Create TABS
+     ====================================== */
+  #tool-tabs {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start; /* left align */
+    gap: 1rem;
+    padding: 10px 20px;
+    background-color: #f8f8f8;
+    border-bottom: 1px solid #ccc;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  
+  .tool-tab {
+    cursor: pointer;
+    padding: 8px 16px;
+    color: #777;
+    border-radius: 5px;
+    transition: background-color 0.3s, color 0.3s;
+  }
+  .tool-tab:hover {
+    background-color: #e2e2e2;
+  }
+  .tool-tab.active {
+    background-color: #2664d8;
+    color: white;
+  }
+  
+  /* ======================================
+     MAIN TOOL CONTAINER
+     ====================================== */
+  #tool-container {
+    /* Push content below fixed navbar */
+    margin-top: 100px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 90%;        /* narrower than 100% for a cleaner layout */
+    max-width: 1200px; /* keep it centered on large screens */
+    margin-left: auto;
+    margin-right: auto;
+    box-sizing: border-box;
+  }
+  
+  /* The discount tool: no border, no shadow anymore */
+  #discount-tool {
+    width: 100%;
+    box-sizing: border-box;
+    border: none !important;
+    box-shadow: none !important;
+    background-color: transparent !important;
+    padding: 0 20px;
+    text-align: left; /* Align contents left if you prefer */
+  }
+  
+  #tool-top-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 10px;
+    flex-wrap: nowrap;
+  }
+  
+  /* ======================================
+     ICON BUTTON FOR FILTERS/REFRESH
+     ====================================== */
+  .icon-button {
+    background-color: transparent;
+    border: none;
+    padding: 8px;
+    cursor: pointer;
+    color: #777; 
+    transition: background-color 0.3s, color 0.3s;
+    border-radius: 5px;
+  }
+  .icon-button:hover {
+    background-color: #e2e2e2;
+  }
+  .icon-button.active {
+    background-color: #2664d8;
+    color: #fff;
+  }
+  .icon-button svg {
+    width: 24px;
+    height: 24px;
+    fill: currentColor;
+  }
+  /* ======================================
+     Filter Dropdown SECTION
+     ====================================== */
+  .filter-select {
+    width: 170px;
+    padding: 10px;
+    font-size: 16px;
+    border: 2px solid #0A0837;
+    border-radius: 5px;
+    color: grey;
+    cursor: pointer;
+  }
+
+  /* #filter-select:hover {
+
+  }
+
+     /* ======================================
+     Filter Dropdown Dialogue SECTION
+     ====================================== */
+  /* .dialog-box {
+
+  }
+
+  .dialog-content {
+
+  } */
+  /* ======================================
+     FILTER SECTION
+     ====================================== */ */
+  #filter-section {
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    width: 100%;
+    max-width: 1000px;
+    margin: 0 auto;
+    box-sizing: border-box;
+  }
+  
+  #filters {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+    width: 90%;
+    max-width: s;
+    margin: 0 auto;
+    flex-wrap: nowrap;
+  }
+  
+  
+  /* ======================================
+     SINGLE & ROUTE TOOLS
+     ====================================== */
+  #singleAddressTool input,
+  #route-addresses input {
+    width: calc(100% - 20px);
+    padding: 10px;
+    font-size: 16px;
+    border: 2px solid #0A0837;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    background-color: white;
+    box-sizing: border-box;
+  }
+  #singleAddressTool input:focus,
+  #route-addresses input:focus {
+    outline: none;
+    border-color: #261b8c;
+    box-shadow: 0 0 5px rgba(56, 40, 197, 0.5);
+  }
+  
+  /* ======================================
+     ACTION BUTTONS (BOTTOM ROW)
+     ====================================== */
+  #tool-bottom-row {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 1rem;
+    justify-content: center;
+    
+  }
+  
+  #tool-bottom-row button {
+    padding: 12px 20px;
+    font-size: 16px;
+    font-weight: bold;
+    background-color: #0A0837;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s, box-shadow 0.3s;
+  }
+  #tool-bottom-row button:hover {
+    background-color: #261b8c;
+    box-shadow: 0 4px 8px rgba(56, 40, 197, 0.5);
+  }
+  
+  /* ======================================
+     TWO-COLUMN LAYOUT (STOPS + MAP)
+     ====================================== */
+  #tool-layout {
+    display: flex;
+    flex-direction: row;
+    gap: 20px;
+  }
+  
+  /* LEFT COLUMN: Station List */
+  #highlightedStationsContainer {
+    flex: 0 0 35%;
+    max-height: 600px;
+    overflow-y: auto;
+    border: 2px solid #0A0837; 
+    border-radius: 10px;
+    padding: 10px;
+    background-color: #fff;
+    box-shadow: 0px 10px 20px rgba(56, 40, 197, 0.1);
+  }
+  #highlightedStationsHeading {
+    text-align: center;
+    margin-top: 0;
+  }
+
+  .station-card.highlight {
+    background-color: #ffffcc;  /* light yellow */
+    border: 2px solid #ff9900;
+  }
+  
+  
+  /* RIGHT COLUMN: Map */
+  #map-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  #map {
+    width: 100%;
+    height: 500px;
+    border-radius: 10px;
+  }
+  
+  /* ======================================
+     STATION CARD LIST
+     ====================================== */
+  #highlightedStationsList {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    list-style-type: none;
+    padding: 0;
+    max-height: 400px;
+    overflow-y: auto;
+  }
+  
+  .station-card {
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    padding: 10px;
+    background-color: #f9f9f9;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s, color 0.2s;
+  }
+  .station-card:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    background-color: #ccc;
+    color: white; 
+  }
+  .station-card h4 {
+    margin: 0 0 5px 0;
+  }
+  .station-card p {
+    margin: 0;
+    font-size: 0.9em;
+    color: #555;
+  }
+  
+  /* ======================================
+     FOOTER
+     ====================================== */
+  footer {
+    margin-top: 20px;
+    text-align: center;
+    font-size: 14px;
+    color: #666;
+  }
+  
+  /* ======================================
+     MEDIA QUERIES
+     ====================================== */
+  @media (max-width: 900px) {
+    #tool-layout {
+      flex-direction: column;
+    }
+    #highlightedStationsContainer,
+    #map-container {
+      flex: initial;
+      width: 100%;
+      max-height: auto;
+    }
+    #map {
+      height: 400px;
+    }
+  }
+  
+  @media (max-width: 600px) {
+    #navbar {
+      flex-direction: column;
+      height: auto;
+      padding: 10px;
+    }
+    #logo-container {
+      margin-bottom: 10px;
+    }
+    #nav-links {
+      flex-direction: column;
+      gap: 10px;
+    }
+    #nav-links button {
+      width: 100%;
+    }
+    #tool-container {
+      flex-direction: column;
+      width: 90%;
+      gap: 15px;
+      padding: 0;
+      margin-top: 240px; /* offset for navbar if needed */
+    }
+    #map-container {
+      height: 400px;
+      margin-top: 20px;
+    }
+    #tool-bottom-row button {
+      font-size: 14px;
+      padding: 10px;
+    }
+    #route-addresses input {
+      font-size: 14px;
+      padding: 8px;
+      width: calc(100% - 16px);
+    }
+    #highlightedStationsList {
+      max-height: 200px;
+    }
+  }
+  
