@@ -179,7 +179,6 @@ function filterStations(stations, userLocation) {
     console.warn("⚠️ No stations to filter.");
     return [];
   }
-  
   const selectedType = document.getElementById("station-filter").value.toLowerCase();
   console.log(`🔍 Selected Station Type: ${selectedType}`);
 
@@ -197,33 +196,10 @@ function filterStations(stations, userLocation) {
   }
   console.log(`💲 Price Filter Active: ${priceFilterActive}, Min: ${priceMin}, Max: ${priceMax}`);
 
-  // Distance filter logic.
   let maxDistance = Infinity;
   if (userLocation) {
     const selectedDistance = document.getElementById("distance-filter").value;
-    // If "Any Distance" or "40+ Miles" is selected, do not filter by distance.
-    if (selectedDistance === "0" || selectedDistance === "5") {
-      maxDistance = Infinity;
-    } else {
-      // For values 1-4, set maxDistance according to miles.
-      const milesToMeters = (miles) => miles * 1609.34;
-      switch (selectedDistance) {
-        case "1":
-          maxDistance = milesToMeters(10);
-          break;
-        case "2":
-          maxDistance = milesToMeters(20);
-          break;
-        case "3":
-          maxDistance = milesToMeters(30);
-          break;
-        case "4":
-          maxDistance = milesToMeters(40);
-          break;
-        default:
-          maxDistance = Infinity;
-      }
-    }
+    maxDistance = selectedDistance !== "0" ? parseInt(selectedDistance) * 16093 : Infinity;
     console.log(`📏 Max Distance (meters): ${maxDistance}`);
   } else {
     console.log("📏 No reference location provided – skipping distance filtering.");
@@ -254,7 +230,6 @@ function filterStations(stations, userLocation) {
     return matchesType && matchesPrice && matchesDistance;
   });
 }
-
 
 
 function applyFilters() {
@@ -863,7 +838,6 @@ function refreshTool() {
   stationsAlongCurrentRoute = [];
   currentReferenceLocation = null;
   clearHighlights();
-  activeHighlightedStations = [];
   if (infoWindow) { infoWindow.close(); }
   const mode = document.getElementById("modeSelect").value;
   if (mode === "single") {

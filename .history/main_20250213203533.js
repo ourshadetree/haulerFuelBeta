@@ -13,7 +13,6 @@ let isMapReady = false;
 let gasStationMarkers = [];
 let routeMarkers = [];
 let stationsAlongCurrentRoute = [];
-let activeHighlightedStations = [];
 
 let currentRouteStart = "";
 let currentRouteEnd = "";
@@ -179,143 +178,63 @@ function filterStations(stations, userLocation) {
     console.warn("⚠️ No stations to filter.");
     return [];
   }
-  
   const selectedType = document.getElementById("station-filter").value.toLowerCase();
   console.log(`🔍 Selected Station Type: ${selectedType}`);
 
-  // Price filter logic.
   const selectedPrice = document.getElementById("price-filter").value;
-  let priceFilterActive = false;
-  let priceMin = 0, priceMax = Infinity;
+  let discountFilterActive = false, discountMin = 0, discountMax = Infinity;
   if (selectedPrice && selectedPrice !== "all-prices") {
-    const parts = selectedPrice.split("-");
-    if (parts.length === 2) {
-      priceMin = parseFloat(parts[0]);
-      priceMax = parseFloat(parts[1]);
-      priceFilterActive = true;
+    if (selectedPrice.indexOf("-") !== -1) {
+      const parts = selectedPrice.split("-");
+      if (parts.length >= 1) {
+        discountMin = parseFloat(parts[0]) / 100;
+        discountMax = parts[1] ? parseFloat(parts[1]) / 100 : Infinity;
+        discountFilterActive = true;
+      }
     }
   }
-  console.log(`💲 Price Filter Active: ${priceFilterActive}, Min: ${priceMin}, Max: ${priceMax}`);
+  console.log(`💲 Discount Filter Active: ${discountFilterActive}, Min: ${discountMin}, Max: ${discountMax}`);
 
-  // Distance filter logic.
   let maxDistance = Infinity;
   if (userLocation) {
     const selectedDistance = document.getElementById("distance-filter").value;
-    // If "Any Distance" or "40+ Miles" is selected, do not filter by distance.
-    if (selectedDistance === "0" || selectedDistance === "5") {
-      maxDistance = Infinity;
-    } else {
-      // For values 1-4, set maxDistance according to miles.
-      const milesToMeters = (miles) => miles * 1609.34;
-      switch (selectedDistance) {
-        case "1":
-          maxDistance = milesToMeters(10);
-          break;
-        case "2":
-          maxDistance = milesToMeters(20);
-          break;
-        case "3":
-          maxDistance = milesToMeters(30);
-          break;
-        case "4":
-          maxDistance = milesToMeters(40);
-          break;
-        default:
-          maxDistance = Infinity;
-      }
-    }
+    maxDistance = selectedDistance !== "0" ? parseInt(selectedDistance) * 16093 : Infinity;
     console.log(`📏 Max Distance (meters): ${maxDistance}`);
   } else {
     console.log("📏 No reference location provided – skipping distance filtering.");
   }
 
   return stations.filter((marker) => {
-    // Filter by station type.
-    const matchesType = selectedType === "all" || marker.stationType.toLowerCase() === selectedType;
-
-    // Determine the station's hauler price.
-    let haulerPrice;
+    const matchesType =
+      selectedType === "all" || marker.stationType.toLowerCase() === selectedType;
+    let discount = 0;
     if (marker.stationType === "Pilot") {
-      haulerPrice = marker.todaysPriceP;
+      if (marker.retailPriceP != null && marker.todaysPriceP != null) {
+        discount = marker.retailPriceP - marker.todaysPriceP;
+      }
     } else if (marker.stationType === "Casey") {
-      haulerPrice = marker.todaysPriceC;
+      discount = 0;
     }
-
-    // Apply the price filter.
-    const matchesPrice = !priceFilterActive || (haulerPrice >= priceMin && haulerPrice < priceMax);
-
-    // Apply the distance filter.
+    const matchesDiscount = !discountFilterActive || (discount >= discountMin && discount < discountMax);
     let matchesDistance = true;
     if (userLocation) {
       const stationPosition = marker.getPosition();
       const distance = google.maps.geometry.spherical.computeDistanceBetween(userLocation, stationPosition);
       matchesDistance = distance <= maxDistance;
     }
-    return matchesType && matchesPrice && matchesDistance;
+    return matchesType && matchesDiscount && matchesDistance;
   });
 }
-
-
 
 function applyFilters() {
   if (!map) return;
   console.log("🔄 Reapplying filters...");
-
-  // Use the activeHighlightedStations if available; otherwise, use all markers.
-  const markersToFilter = (activeHighlightedStations && activeHighlightedStations.length > 0)
-    ? activeHighlightedStations
-    : gasStationMarkers;
-    
-  // Hide all markers in the subset before filtering.
-  markersToFilter.forEach(marker => marker.setVisible(false));
-  
-  // Filter based on the current station type (and price, and distance if applicable)
   const userLocation = currentReferenceLocation;
-  const filteredStations = filterStations(markersToFilter, userLocation);
+  gasStationMarkers.forEach(marker => marker.setVisible(false));
+  const filteredStations = filterStations(gasStationMarkers, userLocation);
   filteredStations.forEach(marker => marker.setVisible(true));
-  
   console.log(`✅ Filtered stations: ${filteredStations.length}`);
 }
-
-
-function updatePriceFilterOptions(stations) {
-  const priceFilter = document.getElementById("price-filter");
-  // Clear existing options.
-  priceFilter.innerHTML = "";
-
-  // Create an "All Prices" option.
-  const optionAll = document.createElement("option");
-  optionAll.value = "all-prices";
-  optionAll.textContent = "All Prices";
-  priceFilter.appendChild(optionAll);
-
-  // Use globalMinPrice and globalMaxPrice.
-  // (Make sure these are updated after fetching your data.)
-  let min = Math.floor(globalMinPrice * 4) / 4; // round down to nearest 0.25
-  let max = Math.ceil(globalMaxPrice * 4) / 4;    // round up to nearest 0.25
-
-  // Loop through from min to max in 0.25 increments.
-  for (let price = min; price < max; price += 0.25) {
-    // Count how many stations have a hauler price in the [price, price + 0.25) range.
-    let count = stations.filter(marker => {
-      let markerPrice;
-      if (marker.stationType === "Pilot") {
-        markerPrice = marker.todaysPriceP;
-      } else if (marker.stationType === "Casey") {
-        markerPrice = marker.todaysPriceC;
-      }
-      return markerPrice >= price && markerPrice < (price + 0.25);
-    }).length;
-
-    // Create the option.
-    const option = document.createElement("option");
-    // We'll use a string like "3.00-3.25" as the value.
-    option.value = `${price.toFixed(2)}-${(price + 0.25).toFixed(2)}`;
-    option.textContent = `$${price.toFixed(2)} - $${(price + 0.25).toFixed(2)} (${count})`;
-    priceFilter.appendChild(option);
-  }
-}
-
 
 /**********************************************
  * MAP INITIALIZATION & MARKER FUNCTIONS
@@ -370,9 +289,6 @@ window.initMap = async function initMap() {
   if (globalMinPrice === Infinity) globalMinPrice = 0;
   if (globalMaxPrice === -Infinity) globalMaxPrice = 100;
   plotLocationsOnMap(map, locations);
-
-  updatePriceFilterOptions(gasStationMarkers);
-
   setTimeout(() => google.maps.event.trigger(map, 'resize'), 100);
   console.log("✅ Google Maps initialized successfully.");
 };
@@ -459,8 +375,6 @@ function plotLocationsOnMap(map, locations) {
     }
   });
 }
-
-
 
 function updateMarkerAsWaypoint(marker) {
   marker.isWaypoint = true;
@@ -585,21 +499,6 @@ async function findStationsForSingleAddress() {
     const radiusInMeters = 80467;
     let stationsInRange = gasStationMarkers.filter((marker) => marker.distance <= radiusInMeters);
     stationsInRange = filterStations(stationsInRange, center);
-
-        // Save these stations as the active highlighted set.
-    activeHighlightedStations = stationsInRange;
-
-    // Now set their icon and visibility.
-    stationsInRange.forEach((marker) => {
-      marker.setIcon({
-        url: "http://maps.google.com/mapfiles/ms/icons/green-dot.png",
-        scaledSize: new google.maps.Size(22, 22),
-        origin: new google.maps.Point(0, 0),
-        anchor: new google.maps.Point(11, 22)
-      });
-      marker.setVisible(true);
-    });
-
     console.log(`🔍 Stations after filtering: ${stationsInRange.length}`);
     stationsInRange.forEach((marker) => {
       marker.setIcon({ url: "http://maps.google.com/mapfiles/ms/icons/green-dot.png", scaledSize: new google.maps.Size(22, 22), origin: new google.maps.Point(0, 0), anchor: new google.maps.Point(11, 22) });
@@ -726,22 +625,6 @@ async function highlightStationsAlongRoute(routePolyline) {
   stationsNearRoute = filterStations(stationsNearRoute, currentReferenceLocation);
   console.log(`🔍 Stations after filtering: ${stationsNearRoute.length}`);
   stationsAlongCurrentRoute = stationsNearRoute;
-
-  activeHighlightedStations = stationsNearRoute;
-
-  // Set the markers’ icons and visibility.
-  stationsNearRoute.forEach((marker) => {
-    if (!marker.isWaypoint) {
-      marker.setIcon({
-        url: "http://maps.google.com/mapfiles/ms/icons/green-dot.png",
-        scaledSize: new google.maps.Size(22, 22),
-        origin: new google.maps.Point(0, 0),
-        anchor: new google.maps.Point(11, 22)
-      });
-    }
-    marker.setVisible(true);
-  });
-
   if (stationsNearRoute.length > 0) {
     stationsNearRoute.forEach((marker) => {
       if (!marker.isWaypoint) {
@@ -863,7 +746,6 @@ function refreshTool() {
   stationsAlongCurrentRoute = [];
   currentReferenceLocation = null;
   clearHighlights();
-  activeHighlightedStations = [];
   if (infoWindow) { infoWindow.close(); }
   const mode = document.getElementById("modeSelect").value;
   if (mode === "single") {
